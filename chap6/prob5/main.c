@@ -1,48 +1,47 @@
-#include <sys/types.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <dirent.h>
 #include <sys/stat.h>
 #include <time.h>
-#include <grp.h>
-#include <pwd.h>
-#include <string.h> 
+#include <string.h>
+#include <limits.h>
 
-char type(mode_t);
-char *perm(mode_t);
-void printStat(char*, char*, struct stat*);
-
-int main(int argc, char **argv)
- {
-     DIR *dp;
-     char *dir;
-     struct stat st;
-     struct dirent *d;
-	 char path[BUFSIZ+1];
-     if (argc == 1)
-         dir = ".";
-     else dir = argv[1];
-
-     if ((dp = opendir(dir)) == NULL) 
-         perror(dir);
-
-     while ((d = readdir(dp)) != NULL) {
-         sprintf(path, "%s/%s", dir, d->d_name);
-         if (lstat(path, &st) < 0)
-             perror(path);
-         else
-             printStat(path, d->d_name, &st);
-     }
-
-     closedir(dp);
-     exit(0);
-}
- void printStat(char *pathname, char *file, struct stat *st)
+int main(int argc, char *argv[])
 {
-    printf("%5d ", st->st_blocks);
-    printf("%c%s ", type(st->st_mode), perm(st->st_mode));
-    printf("%3d ", st->st_nlink);
-	printf("%s %s ", getpwuid(st->st_uid)->pw_name,
-                 getgrgid(st->st_gid)->gr_name);
-    printf("%9d ", st->st_size);
-    printf("%.12s ", ctime(&st->st_mtime)+4);
-    printf("%s\n", file);
-}
+    DIR *dp;
+    struct dirent *entry;
+    struct stat st;
+    char path[PATH_MAX];
 
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s directory\n", argv[0]);
+        return 1;
+    }
+
+    dp = opendir(argv[1]);
+    if (dp == NULL) {
+        perror("opendir");
+        return 1;
+    }
+
+    while ((entry = readdir(dp)) != NULL) {
+        if (snprintf(path, sizeof(path), "%s/%s",
+                     argv[1], entry->d_name) >= sizeof(path)) {
+            continue;
+        }
+
+        if (lstat(path, &st) == -1) {
+            perror("lstat");
+            continue;
+        }
+
+        printf("%-20s %10ld %4ld %s",
+               entry->d_name,
+               (long)st.st_size,
+               (long)st.st_nlink,
+               ctime(&st.st_mtime));
+    }
+
+    closedir(dp);
+    return 0;
+}

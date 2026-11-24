@@ -1,13 +1,17 @@
+#include <stdio.h>
 #include <unistd.h>
-#include <stdlib.h>
 
-int main(int argc, char *argv[ ])
+int main(int argc, char *argv[])
 {
-   int unlink( );
-if (unlink(argv[1]) == -1) {
-perror(argv[1]);
-      exit(1);
-   }
-   exit(0);
-}
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s filename\n", argv[0]);
+        return 1;
+    }
 
+    if (unlink(argv[1]) == -1) {
+        perror("unlink");
+        return 1;
+    }
+
+    return 0;
+}
